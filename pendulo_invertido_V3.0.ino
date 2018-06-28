@@ -1,46 +1,41 @@
 #include <PID_v1.h>
 #include <Encoder.h>
 
-#define esquerda 6
+#define esquerda 8
 #define direita  9
 
-#define potSetpoint A0
 
 float Pendulo, lastPendulo = 0;
 
-Encoder linear(19, 18);
+Encoder linear(3, 4);
 double lastLinear;
 double linearSetpoint, linearInput, linearOutput;
-double linearKp = 3;
-double linearKi = 0;
-double linearKd = 0;
+double linearKp = 450;
+double linearKi = 10;
+double linearKd = 0.2;
 
 int linearRead;
 PID linPID(&linearInput, &linearOutput, &linearSetpoint, linearKp, linearKi, linearKd, DIRECT);
 
-Encoder angular(3, 2);
+Encoder angular(18, 19);
 double lastAngular;
 double angularSetpoint, angularInput, angularOutput;
-double angularKp = 1;
+double angularKp = 10;
 double angularKi = 0;
 double angularKd = 0;
-
-double Output;
 
 int fimEsquerdo, lastfimEsquerdo;
 int fimDireito, lastfimDireito;
 
-int lowSpeed = 255*2/9;
-int maxSpeed = 255*1/2;
 int posMin;
 int posMax;
 
 void setup() {
-  pinMode(12, INPUT_PULLUP);
-  pinMode(11, INPUT_PULLUP);
+  pinMode(11, INPUT);
+  pinMode(12, INPUT);
 
   Serial.begin(115200);
-  Serial.print("Pêndulo Invertido V2");
+  Serial.print("Pêndulo Invertido V3");
   delay(500);
   Serial.println();
   Serial.println("Leitura dos Encoders");
@@ -49,28 +44,29 @@ void setup() {
 
 
 
-  fimDireito = digitalRead(12);
-  fimEsquerdo = digitalRead(11);
+  fimDireito = digitalRead(11);
+  fimEsquerdo = digitalRead(12);
 
   while (fimEsquerdo != 0) {
-    fimEsquerdo = digitalRead(11);
-    fimDireito = digitalRead(12);
+    fimEsquerdo = digitalRead(12);
+    fimDireito = digitalRead(11);
 
-    Serial.println("Loop (1)");
+    Serial.println(fimDireito);
     
-    analogWrite(esquerda, lowSpeed);
+    digitalWrite(esquerda, HIGH);
     digitalWrite(direita, LOW);
+    
   }
   linear.write(0);
   posMin = linear.read();
   delay(2000);
   while (fimEsquerdo != 1 || fimDireito != 0) {
-    fimEsquerdo = digitalRead(11);
-    fimDireito = digitalRead(12);
+    fimEsquerdo = digitalRead(12);
+    fimDireito = digitalRead(11);
 
   Serial.println("Loop (2)");
     
-    analogWrite(direita, lowSpeed);
+    digitalWrite(direita, HIGH);
     digitalWrite(esquerda, LOW);
 
   }
@@ -79,7 +75,7 @@ void setup() {
   Serial.print(linear.read());
   delay(2000);
 
-  linearSetpoint = posMax/200;
+  linearSetpoint = 122.00;
   linPID.SetMode(AUTOMATIC);
 }
 
@@ -94,17 +90,16 @@ void loop() {
   angularInput = angular.read();
 
 
-  fimDireito = digitalRead(12);
-  fimEsquerdo = digitalRead(11);
+  fimDireito = digitalRead(11);
+  fimEsquerdo = digitalRead(12);
 
   if (linearInput != lastLinear || angularInput != lastPendulo) {
 
     if (linearInput > linearSetpoint ) {
       linPID.SetControllerDirection(REVERSE);
       linPID.Compute();
-
-      Output = map(linearOutput, 0, 255, 0, maxSpeed);
-      analogWrite(esquerda, Output);
+      
+      analogWrite(esquerda, linearOutput);
       digitalWrite(direita, LOW);
 
 
@@ -117,10 +112,9 @@ void loop() {
     }
     if (linearInput < linearSetpoint) {
       linPID.SetControllerDirection(DIRECT);
-      linPID.Compute();
+      linPID.Compute(); 
 
-      Output = map(linearOutput, 0, 255, 0, maxSpeed);
-      analogWrite(direita, Output);
+      analogWrite(direita, linearOutput);
       digitalWrite(esquerda, LOW);
 
     }
@@ -133,7 +127,7 @@ void loop() {
     Serial.print("  ");
 //    Serial.print("Saída PID Linear: ");
     Serial.print("[");
-    Serial.print(Output);
+//    Serial.print(Output);
 //    Serial.print("]");
 //    Serial.print("  ");
 //    Serial.print("Posição Angular: ");
